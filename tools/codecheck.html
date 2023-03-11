@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Kuroshimu - Code Checker</title>
+        <script src="viz/viz.js"></script>
+        <script src="viz/full.render.js"></script>
+        <script src="../js/simulation/database.js"></script>
+    </head>
+<body onload="onl()"></body>
+
+<script>
+function onl() {
+
+var request = new XMLHttpRequest();
+request.open("GET", "../js/simulation/person.js?a="+Math.random());
+request.onload = ()=>{
+    if (request.status === 200) {
+        checkCode(request.responseText);
+    }
+};
+request.send();
+
+}
+
+
+function checkCode(code) {
+
+
+let
+    lines=code.split("\n"),
+    entities={},
+    entity=0,
+    fn=0,
+    fnbody="",
+    section=0;
+
+
+
+let mergeTestimonies=(body,list)=>{
+    if (list) {
+        [
+            /\.addTestimony\(([^;]+);/g,
+            /\.addShockingTestimony\(([^;]+);/g
+        ].forEach(regex=>{
+            let
+                found=false,
+                added=false;
+            body.replace(regex,(f,f1)=>{
+                found=true;
+                f1.replace(/action:[ ]*"([^"]+)"/g,(e,e1)=>{
+                    added=true;
+                    if (list.testimonies.indexOf(e1)==-1)
+                        list.testimonies.push(e1);
+                })
+            })
+            if (found){
+                let e1="(inherit)";
+                if (!added && (list.testimonies.indexOf(e1)==-1))
+                    list.testimonies.push(e1);
+            }
+        });
+    }
+}
+
+
+lines.forEach(line=>{
+
+if (!entity) {
+    let found=line.match(/^function ([A-Z].[a-zA-Z0-9]+)/);
+    if (found) {
+        entity={
+            id:found[1],
+            fn:{
+                personPerformInteraction:{
+                    id:"personPerformInteraction",
+                    calls:[
+                        "consumeStat",
+                        "earnMoney","payMoney",
+                        "addEntry"
+                    ],
+                    section:0,
+                    facts:["(argument)"],
+                    testimonies:[]
+                },
+                addEntry:{
+                    id:"addEntry",
+                    calls:[],
+                    section:0,
+                    facts:[],
+                    testimonies:[]
+                }
+            }
+        }
+    }
+} else {
+    if (line.match(/^\}/)) {
+        entities[entity.id]=entity;
+        fn=0;
+        fnbody="";
+        entity=0;
+        section=0;
+    } else {
+        let secmatch=line.match(/^    \/\/ (.*)/);
+        let trimline=line.trim();
+        let fnmatch=trimline.match(/^this\.([a-zA-Z]+)=\(/);
+        let fnmatch2=line.match(/^    let ([a-zA-Z]+)=\(/);
+
+        if (secmatch) {
+            section=secmatch[1].trim();
+        } else if (fnmatch) {
+            mergeTestimonies(fnbody,fn);
+            fnbody="";
+            fn={
+                id:fnmatch[1],
+                calls:[],
+                section:section,
+                facts:[],
+                testimonies:[]
+            }
+            entity.fn[fn.id]=fn;
+        } else if (fnmatch2) {
+            mergeTestimonies(fnbody,fn);
+            fnbody="";
+            fn={
+                id:fnmatch2[1],
+                calls:[],
+                section:section,
+                facts:[],
+                testimonies:[]
+            }
+            entity.fn[fn.id]=fn;
+        } else if (fn) {
+            fnbody+=line;
+            line.replace(/this\.([a-zA-Z]+)\(/,(m,m1)=>{
+                if (fn.calls.indexOf(m1)==-1)
+                    fn.calls.push(m1);
+            });
+            for (let k in entity.fn)
+                if (line.match(new RegExp('(\\b)'+k+'\\('))) {
+                    if (fn.calls.indexOf(k)==-1)
+                        fn.calls.push(k);
+                }
+            if (line.match(/\.personPerformInteraction\(/)) {
+                if (fn.calls.indexOf("personPerformInteraction")==-1)
+                    fn.calls.push("personPerformInteraction");
+            }
+            if (line.match(/\.addShockingTestimony\(/)) {
+                if (fn.calls.indexOf("addShockingTestimony")==-1)
+                    fn.calls.push("addShockingTestimony");
+            }
+            if (line.match(/blackbox\.addEntry\(/)) {
+                if (fn.calls.indexOf("addEntry")==-1)
+                    fn.calls.push("addEntry");
+                line.replace(/"([^"]+)"/,(e,e1)=>{
+                    if (fn.facts.indexOf(e1)==-1)
+                        fn.facts.push(e1);
+                })
+            }
+            if (line.match(/inheritrelatedfacts/)) {
+                if (fn.facts.indexOf("(inherit)")==-1)
+                    fn.facts.push("(inherit)");
+            }
+        }
+    }
+}
+
+});
+
+
+function addRoutes(into,fn,l,route,ofn) {
+    if (!route) {
+        l=0;
+        ofn=fn;
+        into.fn[fn].routes=[];
+        route=[fn];
+    }
+    let added=false;
+    into.fn[fn].calls.forEach(calls=>{
+        if (route.indexOf(calls)==-1) {
+            added=true;
+            let newroute=JSON.parse(JSON.stringify(route));
+            newroute.push(calls);
+            addRoutes(into,calls,l+1,newroute,ofn);
+        }
+    })
+    if (!added)
+        into.fn[ofn].routes.push(route);
+}
+
+
+
+for (let f in entities.Person.fn) {
+    addRoutes(entities.Person,f);
+}
+
+function routeInDumping(route,dumping) {
+    if (dumping[0]=="*")
+        return true;
+    for (let i=0;i<route.length;i++)
+        if (dumping.indexOf(route[i])!=-1)
+            return true;
+    return false;
+}
+
+let BLACKLIST=["pass"];
+let undumping=[
+    // "processTestimony",
+    // "performEffort"
+    // "addShockingTestimony",
+    // "lookAround"
+];
+let dumping=[
+    // "*"
+    // "debateQuietlyWithPerson","debateLoudlyWithPerson"
+    // "isAttractedByPerson"
+    // "tiedByPerson","untiedByPerson"
+    // "processTestimony",
+    "addTestimony"
+    // "guessBiasFor"
+    // "raiseStress",
+    // "lowerStress", "relax",
+    // "shareAgreementWith" // TODO: Almost never used.
+    // "beLoudWithPerson"
+],blocks={};
+
+
+let getBlock=(blockid,dumping)=>{
+    let
+       block=blocks[blockid]||{
+            id:blockid,
+            linkedTo:[],
+            label:blockid,
+            linkedBy:0
+        };
+    blocks[blockid]=block;
+    return block;
+}
+
+let out="",arrows=[],arrowIds={},found={};
+for (let f in entities.Person.fn) {
+    entities.Person.fn[f].routes.forEach(route=>{
+        if ((f=="untiePerson")&&(route.indexOf("tiedByPerson")!=-1)) debugger;
+        let destinationPos=-1;
+        if (dumping[0]=="*")
+            destinationPos=route.length-1;
+        else
+            dumping.forEach(dump=>{
+                destinationPos=Math.max(destinationPos,route.indexOf(dump));
+            });
+        if (destinationPos!=-1) {
+            route.splice(destinationPos+1,route.length);
+            if ((routeInDumping(route,dumping))&&(!routeInDumping(route,undumping))) {
+                for (let i=0;i<route.length-1;i++)
+                    if ((BLACKLIST.indexOf(route[i])==-1)&&(BLACKLIST.indexOf(route[i+1])==-1)) {
+                        found[route[i]]=true;
+                        found[route[i+1]]=true;
+                        let arrow={
+                            from:route[i],
+                            to:route[i+1],
+                            id:route[i]+" -> "+route[i+1]
+                        };
+                        if (!arrowIds[arrow.id]) {
+                            arrows.push(arrow);
+                            arrowIds[arrow.id]=true;
+                            let block=getBlock(route[i],dumping);
+                            if (dumping.indexOf(route[i+1])!=-1)
+                                block.style="fontcolor=white, fillcolor=blue, style=filled";
+                            if (dumping.indexOf(route[i+2])!=-1)
+                                block.style="fontcolor=black, fillcolor=yellow, style=filled";
+                            if (block.linkedTo.indexOf(route[i+1])==-1)
+                                block.linkedTo.push(route[i+1]);
+                            let blockdest=getBlock(route[i+1],dumping);
+                            blockdest.linkedBy++;
+                        }
+                        if (route[i+1]==dumping)
+                            break;
+                    }
+            }
+        }
+    })
+}
+
+let merges=1,process=true;
+while (process) {
+   
+console.log("---");
+    process=false;
+    for (let k in blocks) {
+        let block=blocks[k];
+        console.log(k,block.linkedTo,block.linkedTo.length?blocks[block.linkedTo[0]].linkedBy:0);
+        if ((block.linkedTo.length==1)&&(blocks[block.linkedTo[0]].linkedBy==1)) {
+            let
+                linkedto=block.linkedTo[0],
+                id="merge"+merges;
+            let destblock=getBlock(id);
+            destblock.linkedTo=blocks[linkedto]?blocks[linkedto].linkedTo:[];
+            destblock.style=block.style||blocks[linkedto].style;
+            destblock.label=block.label+"\\n"+blocks[linkedto].label;
+            arrows.forEach(arrow=>{
+                if (arrow.to == k) {
+                    process=true;
+                    blocks[arrow.from].linkedTo.splice(blocks[arrow.from].linkedTo.indexOf(arrow.to),1);
+                    blocks[arrow.from].linkedTo.push(id);
+                    arrow.to=id;
+                    arrow.id=arrow.from+" -> "+id;
+                    destblock.linkedBy++;
+                }
+            });
+            arrows=arrows.filter(arrow=>{
+                return (arrow.from!=k)&&(arrow.to!=k)&&(arrow.from!=linkedto)&&(arrow.to!=linkedto)
+            })
+            if (destblock.linkedTo.length)
+                arrows.push({
+                    from:id,
+                    to:destblock.linkedTo[0],
+                    id:id+" -> "+destblock.linkedTo[0]
+                });
+            delete blocks[k];
+            delete blocks[linkedto];
+            merges++;
+            break;
+        }
+    } 
+    // process=false;
+}
+arrows.forEach(arrow=>{
+    out+=arrow.from+" -> "+arrow.to+"\n";
+})
+
+for (let b in blocks) {
+    out+=blocks[b].id+" [label=\""+blocks[b].label+"\" "+(blocks[b].style||"")+"]\n";
+}
+
+var viz = new Viz();
+            
+viz.renderSVGElement("digraph G {\n"+out+"\n}")
+.then(function(element) {
+    document.body.appendChild(element);
+
+    let div=document.createElement("div");
+    document.body.appendChild(div);
+    let out="";
+    let sections={
+
+    };
+
+    BLACKLIST=[
+        "addEntry",
+        "pass",
+        "raiseTag",
+        "lowerTag",
+        "addToTag",
+        "removeFromTag",
+        "setTag",
+        "mayPersonAddTag",
+        "listShareableTraitsWith",
+        "addBias",
+        "addCommitment",
+        "setClock",
+        "setDisposeTimer",
+        "setName",
+        "setSurname",
+        "addIdentifier",
+        "addUniqueIdentifier",
+        "initializeEntity",
+        "setHomePlace",
+        "setWorkPlace",
+        "addDestinationPlace",
+        "planCommitments",
+        "updateTelemetryTag",
+        "updateAllTelemetry",
+    ];
+    CONTINUOUSACTIONS=[
+        "rest",
+        "relax",
+        "menace",
+        "menacedBy",
+        "personPerformInteraction",
+        "workAt",
+        "sleep",
+        "recover"
+    ],
+    ESCAPINGACTIONS=[
+        "escapedMurderByPerson",
+        "escapedFromTie",
+    ],
+    COUNTERMANAGEMENT=[
+        "setRandomizer",
+        "setTelemetry",
+        "initializeOpinion",
+        "raiseOpinionOf",
+        "zeroOpinionOf",
+        "lowerOpinionOf",
+        "raiseObscurity",
+        "raiseAttention",
+        "lowerAttention",
+        "lowerStress",
+        "raiseStress",
+        "consumeStat",
+        "raiseSuspectOf",
+        "zeroesSuspectOf",
+        "lowerSuspectOf",
+        "shock",
+        "unshock",
+        "performEffort",
+        "removeSpecialOne",
+        "replaceSpecialOne",
+        "breakdownDueTo",
+        "untie", // Low-level untie flag set
+        "wantFindLove" // Manages the love cooldown counter
+    ],
+    TESTIMONYPROCESSING=[
+        "processTestimony",
+        "addShockingTestimony",
+    ],
+    INITIALIZATION=[
+        "marry",
+    ],
+    SYSTEM=[
+        "dispose",
+        "remove",
+        "listJuicyTestimonies",
+        "listJuicyShareableTraitsWith",
+    ],
+    GOODBADPERSON=[
+        "thinkIsGoodPerson",
+        "thinkIsBadPerson",
+        "toldPersonIsGood",
+        "toldPersonIsBad",
+    ],
+    BASICMOVEMENT=[
+        "moveTo",
+        "hurryTo", // As called by moveTo
+    ],
+    DISCUSSIONPARTS=[
+        "shareAgreementWith",
+        "debateQuietlyWithPerson"
+    ],
+    PROXIES=[
+        "debateLoudlyWithPerson" // Proxies beLoudWithPerson
+    ],
+    NOTESTIMONYLIST=[
+        // Testimony managed by caller
+        "addBond",
+        "removeBond",
+        "gainPersonTrait",
+        "addSpecialOne",
+        // Testimony processing do not generates testimonies
+        "processTestimony",
+        "learnTestimony",
+        "addTestimony",
+        "forgetTestimony",        
+        // Utilities, no testimonies needed
+        "onBiasFor",
+        // Minor events that not worhty to be testimonied
+        "addToCalendar",
+        "earnMoney",
+        // You can't be the testimony of your own death or collapsed... Okay, stuff is getting too too philosophical here. :)
+        "die",
+        "forceRest",
+        "collapseDueTo",
+        // Key events that will *never* be testimonied, even eavesdropped
+        "murderPerson",
+        "tiePerson",
+        "forcedToMoveByPerson",
+        "endMenacePerson",
+        "flirtWithPerson",
+        // "startMenacePerson" // This may be admitted by the guilty one and eaveasdropped
+        // Unuseful testimonies
+        "hangOut",
+    ]
+    // Continuous activities are not generating testimonies
+    .concat(CONTINUOUSACTIONS)
+    // Linked to escape, which generates testimonies
+    .concat(ESCAPINGACTIONS)
+    // Counter management, testimonies are generated by caller
+    .concat(COUNTERMANAGEMENT)
+    // Testimony processing and generation are not facts
+    .concat(TESTIMONYPROCESSING)
+    // Premise testimonies are hidden
+    .concat(INITIALIZATION)
+    // System events do not generates testimonies
+    .concat(SYSTEM)
+    // Good/Bad person testimony management is made by testimony functions
+    .concat(GOODBADPERSON)
+    // Basic movement doesn't create testimonies
+    .concat(BASICMOVEMENT)
+    // Moments of a discussion doesn't generate testimonies
+    .concat(DISCUSSIONPARTS)
+    // Proxy events doesn't generate testimonies - the called method will do the job
+    .concat(PROXIES)
+    // Exceptions:
+    .filter(element=>{
+        return [
+            // Except for menacedby: the menacer will try to remove this testimony every time but it may spill out.
+            "menacedBy",
+            // It actually proxies addTestimony, so it generates a testimony
+            "addShockingTestimony"
+        ].indexOf(element)==-1;
+    })
+    NOFACTLIST=[
+        // System events are not generating facts
+        "addFriend",
+        "addSpecialOne",
+        // Startup events do not generate events ATM
+        "marry",
+        // What people think or feel are not facts
+        "guessBiasFor",
+        "cantPerformSchedule",
+        // The fact is always the murder - fact is inherited
+        "manageMurderTestimonyTestimony",
+        "manageMurderTestimony",
+        // Barely visible events don't generate facts.
+        "lookAround",
+        // Seeing a dead body is not reliable and not related to the murdering
+        "manageDeath",
+        // flirtWithPerson calls Makeslover on both sides, so the fact is already generated
+        "flirtWithPerson",
+        // forceRest calls startResting, that generates the fact
+        "forceRest",
+    ]
+    // Continuous activities are not generating facts
+    .concat(CONTINUOUSACTIONS)
+    // Linked to escape, which generates a fact
+    .concat(ESCAPINGACTIONS)
+    // Testimony processing and generation are not facts
+    .concat(TESTIMONYPROCESSING)
+    // Premise testimonies are hidden
+    .concat(INITIALIZATION)
+    // Counter management, facts are generated by caller
+    .concat(COUNTERMANAGEMENT)
+    // System events do not generates facts
+    .concat(SYSTEM)
+    // Good/Bad person generates no facts
+    .concat(GOODBADPERSON)
+    // Basic movement doesn't create facts
+    .concat(BASICMOVEMENT)
+    // Moments of a discussion doesn't generate facts
+    .concat(DISCUSSIONPARTS)
+    // Proxy events doesn't generate facts - the called method will do the job
+    .concat(PROXIES)
+    // Exceptions:
+    .filter(element=>{
+        return [
+            // Detailed logs in blackboxes to better understand events dynamics
+            // --- Person/place interactions
+            "personPerformInteraction",
+            "workAt",
+            // --- Obscurity
+            "raiseObscurity",
+            // --- Attention (justifies suspect)
+            "raiseAttention",
+            "lowerAttention",
+            // --- Suspect
+            "raiseSuspectOf",
+            "zeroesSuspectOf",
+            "lowerSuspectOf",
+            // --- Displacements
+            "remove",
+            "hurryTo", // As called by moveTo
+            // --- Shock management
+            "shock",
+            "unshock",
+            // --- Stress management
+            "lowerStress",
+            "raiseStress",
+            "sleep",
+            "recover",
+            // --- Stats management
+            "consumeStat",
+        ].indexOf(element)==-1;
+    });
+
+    // Fact + testimony but no question about.
+    const HINTS={
+        "payMoney":"Suggests stress derived from no money",
+        "manageMurderTestimonyTestimony":"Suggests murder happening",
+        "manageMurderTestimony":"Suggests murder happening",
+        "tiedByPerson":"Suggests person tied event",
+        "untiedByPerson":"Suggests person tied event",
+        "untiePerson":"Suggests person tied event",
+        "chitChatWithPerson":"Suggests people relations",
+        "eavesdropPerson":"Suggests information traffic",
+    }
+    for (let k in entities.Person.fn) {
+        let fn=entities.Person.fn[k];
+        if (
+            !k.match(/^get([A-Z].)/)&&
+            !k.match(/^will([A-Z].)/)&&
+            !k.match(/^is([A-Z].)/)&&
+            (BLACKLIST.indexOf(k)==-1)&&
+            !found[k]
+        ) {
+            if (!sections[fn.section]) sections[fn.section]=[];
+            if (sections[fn.section].indexOf(k)==-1) sections[fn.section].push(k);
+        }
+    }
+
+    for (let k in sections) {
+        out+="<h2>"+k+"</h2><ul>";
+        sections[k].forEach(fn=>{
+            let
+                fnobj=entities.Person.fn[fn],
+                symbol="",
+                weight="",
+                color="black",
+                notes=[],
+                tiny="",
+                noTestimony=(fnobj.calls.indexOf("addTestimony")==-1)&&(fnobj.calls.indexOf("addShockingTestimony")==-1),
+                noAddEntry=fnobj.calls.indexOf("addEntry")==-1;
+
+            if (NOTESTIMONYLIST.indexOf(fn)==-1) {
+                if ((fnobj.testimonies.length==0))
+                    color="orange";
+                if (noTestimony) {
+                    notes.push("Should generate testimony");
+                    weight="bold";
+                    color="red";
+                }
+            } else {
+                if (fnobj.testimonies.length>0)
+                    color="orange";
+                if (!noTestimony) {
+                    notes.push("Shouldn't generate testimony");
+                    weight="bold";
+                    color="purple";
+                }
+            }
+            if (NOFACTLIST.indexOf(fn)==-1) {
+                if (fnobj.facts.length==0)
+                    color="orange";
+                if (noAddEntry) {
+                    notes.push("Should generate fact");
+                    weight="bold";
+                    color="blue";
+                }
+            } else {
+                if ((fnobj.facts.length>0)&&(NOFACTLIST.indexOf(fn)==-1))
+                    color="orange";
+                if (!noAddEntry) {
+                    notes.push("Shouldn't generate fact");
+                    weight="bold";
+                    color="green";
+                }
+            }
+            fnobj.testimonies.forEach(testimony=>{
+                // Approximative check
+                if (!testimony.startsWith("(")) {
+                    let dbtestimony=TESTIMONIES_DATABASE[testimony];
+                    if (dbtestimony) {
+                        let notRelatedFacts=!!dbtestimony.notRelatedFacts;
+                        if (notRelatedFacts && (fnobj.facts.length>0))
+                            color="pink";
+                        if (!notRelatedFacts && (fnobj.facts.length==0))
+                            color="pink";
+                    } else console.warn("can't find testimony",testimony);
+                }
+            })
+            if (fnobj.facts.length) {
+                let bgcolor="gray",asked=false,label="",shouldbered=HINTS[fn],isred=false;
+                fnobj.facts.forEach(fact=>{
+                    if (FACTS_DATABASE[fact] && FACTS_DATABASE[fact].question) {
+                        asked=true; // TODO: Give bonus points to these?
+                    }
+                })
+                if (asked)
+                    if (fnobj.testimonies.length) {
+                        bgcolor="yellow";
+                        label="[ ? ]";
+                    } else {
+                        bgcolor="green";
+                        label="[ ?? ]";
+                    }
+                else if (fnobj.testimonies.length) {
+                    isred=true;
+                } else {
+                    bgcolor="gray";
+                    label="[ _ ]";
+                }
+                if (isred && shouldbered) {
+                    bgcolor="gray";
+                    label="[ _ ]";
+                } else if (isred || shouldbered) {
+                    bgcolor="red";
+                    label="[ !!! ]";
+                }
+                symbol="<span style='background-color:"+bgcolor+";font-weight:bold'>"+label+"</span> ";
+            }
+            if (fnobj.facts.length)
+                tiny+="Facts: "+fnobj.facts.join(", ");
+            if (fnobj.testimonies.length)
+                tiny+=(tiny?"<br>":"")+"Testimonies: "+fnobj.testimonies.join(", ");
+            out+="<li style='color:"+color+";font-weight:"+weight+"'>"+symbol+fn+" "+notes.join(" | ")+"<br><div style='margin:0 0 10px 0;font-size:8px'>"+tiny+"</div></li>";
+        })
+        out+="</ul>"
+    }
+
+    // Check reasons usage
+    let usage={
+        suspect:[],
+        suspectStress:[],
+        stress:[],
+        stressTestimony:[],
+        testimony:[],
+        stressSuspectTestimony:[],
+        secret:[]    
+    };
+    for (let k in REASONS_DATABASE) {
+        if (REASONS_DATABASE[k].label)
+            if (!REASONS_DATABASE[k].category || (REASONS_DATABASE[k].priority===undefined)) console.warn(k);
+        let found={
+            id:k,
+            count:0,
+            stress:0,
+            suspect:0,
+            testimony:0,
+            secret:0
+        };
+        if (([
+            "forgotTestimony"
+        ].indexOf(k)!=-1) || !k.endsWith("Testimony")) {
+            lines.forEach(line=>{
+                let ok=false;
+                if (line.indexOf("raiseSuspectOf(\""+k+"\"")!==-1) {
+                    found.suspect++;
+                    ok=true;
+                }
+                if (line.indexOf("raiseStress(\""+k+"\"")!==-1) {
+                    found.stress++;
+                    ok=true;
+                }
+                if (line.indexOf("die([\""+k+"\"")!==-1) {
+                    found.secret++;
+                    ok=true;
+                }
+                if (line.indexOf("action:\""+k+"\"")!==-1) {
+                    found.testimony++;
+                    ok=true;
+                }
+                if (ok)
+                    found.count++;
+            });
+        } else {
+            if (!TESTIMONIES_DATABASE[k.substr(0,k.length-9)])
+                console.warn("Missing reason in code",k);
+            else {
+                found.testimony++;
+                found.count++;
+            }
+        }
+        if (found.count) {
+            if (found.testimony) {
+                if (found.stress) {
+                    if (found.suspect)
+                        usage.stressSuspectTestimony.push(found);
+                    else
+                        usage.stressTestimony.push(found);
+                } else if (!found.suspect && !found.stress)
+                    usage.testimony.push(found);
+                else
+                    console.warn("SubUnmapped",found);    
+            } else if (found.suspect) {
+                if (found.stress)
+                    usage.suspectStress.push(found);
+                else
+                    usage.suspect.push(found);
+            } else if (!found.suspect && found.stress)
+                usage.stress.push(found);
+            else if (found.secret)
+                usage.secret.push(found);
+            else
+                console.warn("Unmapped",found);
+        } else {
+            console.warn("Reason",k,"not found");
+        }
+    }
+    console.log("suspect",usage.suspect);
+    console.log("suspectStress",usage.suspectStress);
+    console.log("stress",usage.stress);
+
+    console.log("stressTestimony",usage.stressTestimony);
+    console.log("testimony",usage.testimony);
+    console.log("stressSuspectTestimony",usage.stressSuspectTestimony);
+
+    console.log("secret",usage.secret);
+
+    div.innerHTML=out;
+
+
+
+
+})
+.catch(error => {
+    // Create a new Viz instance (@see Caveats page for more info)
+    viz = new Viz();
+
+    // Possibly display the error
+    console.error(error);
+
+
+});
+
+console.log(entities.Person);
+}
+</script>
+</html>

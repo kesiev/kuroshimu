@@ -1,0 +1,53 @@
+<html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta property="og:image" content="https://www.kesiev.com/kuroshimu/screenshot.png">
+    <meta property="og:description" content="Kuroshimu is a procedural black box investigation game: guess what happened to 6 persons trapped by a cute journalist dog in an endlessly resetting simulated world.">
+    <title>Kuroshimu</title>
+    <link rel="stylesheet" type="text/css" href="style/style.css">
+    <link rel="stylesheet" type="text/css" href="style/extras.css">
+    <link rel="stylesheet" type="text/css" href="style/Seshat/stylesheet.css">
+    <link rel="stylesheet" type="text/css" href="style/Ferrum/stylesheet.css">
+    
+    <script src="chart/chart.umd.js"></script>
+    <script src="chart/helpers.js"></script>
+
+    <script src="js/simulation/database.js"></script>
+    <script src="js/simulation/telemetry.js"></script>
+    <script src="js/simulation/blackbox.js"></script>
+    <script src="js/simulation/clock.js"></script>
+    <script src="js/simulation/commitment.js"></script>
+    <script src="js/simulation/place.js"></script>
+    <script src="js/simulation/person.js"></script>
+    <script src="js/simulation/world.js"></script>
+    <script src="js/simulation/journalist.js"></script>
+    <script src="js/simulation/simulation.js"></script>
+    <script src="js/simulation/randomizers.js"></script>
+    <script src="js/simulation/mastermind.js"></script>
+    <script src="js/tools/tools.js"></script>
+    <script src="js/campaign.js"></script>
+    <script src="js/game.js"></script>
+
+    <script src="js/jspdf.umd.min.js"></script>
+    <script src="js/svg2pdf.umd.min.js"></script>
+    <script src="js/fonts/Seshat-normal.js"></script>
+    <script src="js/fonts/Ferrum-normal.js"></script>
+
+    <script src="js/paperprinter.js"></script>
+    <script src="js/svg.js"></script>
+    
+</head><body onload="onl()">    
+    <div style="position: absolute;left: -1000px;">
+        <div style="font-family: Seshat;">Font loaded</div>
+        <div style="font-family: Times; font-weight: bold;">Font loaded</div>
+        <div style="font-family: Ferrum;">Font loaded</div>
+    </div>
+</body></html>
+<script>
+
+function onl() {
+    Game.run();
+}
+
+</script>

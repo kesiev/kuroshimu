@@ -1,0 +1,355 @@
+<html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" id="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>Kuroshimu - Contents</title>
+    <script src="../js/simulation/database.js"></script>    
+    <script src="../js/simulation/randomizers.js"></script>    
+    <script src="../js/tools/tools.js"></script>    
+    <script src="../js/game.js"></script>    
+    <script src="../js/campaign.js"></script>    
+ 
+</style>
+</head><body onload="onl()"></body></html>
+<script>
+
+function onl() {
+
+    const
+        TARGET_VERYLOW=2,
+        TARGET_LOW=3,
+        TARGETS=[
+            {
+                label:"Biases",
+                target:2,
+                list:SIMULATION_DATABASE.personBiases
+            },{
+                label:"Biases aliases",
+                target:TARGET_LOW,
+                list:SIMULATION_DATABASE.personBiases,
+                subValue:"identifiers"
+            },{
+                label:"Persons",
+                target:6,
+                list:SIMULATION_DATABASE.persons
+            },{
+                label:"Places",
+                target:6,
+                list:SIMULATION_DATABASE.places
+            },{
+                label:"Person features",
+                target:TARGET_LOW,
+                list:SIMULATION_DATABASE.personFeatures,
+                subValue:"identifiers"
+            },{
+                label:"Questionnaire basic sentences",
+                target:1,
+                list:QUESTIONNAIRE_BASIC_SENTENCES,
+                subValue:""
+            },{
+                label:"Questionnaire prizes",
+                target:TARGET_LOW,
+                list:QUESTIONNAIRE_PRIZES,
+                subValue:"sentences"
+            },{
+                label:"Questionnaire grades",
+                target:TARGET_LOW,
+                list:QUESTIONNAIRE_GRADES,
+                subValue:"sentences"
+            },{
+                label:"Testimonies articles",
+                target:TARGET_VERYLOW,
+                list:TESTIMONIES_DATABASE,
+                subValue:"article.sentences.0.versions"
+            },{
+                label:"Testimonies titles",
+                target:TARGET_LOW,
+                list:TESTIMONIES_DATABASE,
+                skip:["eavesdrop"],
+                subValue:"article.titles"
+            },{
+                label:"Testimony topic summaries",
+                target:TARGET_LOW,
+                list:TESTIMONIES_DATABASE,
+                skip:["cantPerformSchedule"],
+                subValue:"topicSummary.default"
+            },{
+                label:"Testimony topic can't perform schedule",
+                target:TARGET_LOW,
+                list:TESTIMONIES_DATABASE.cantPerformSchedule.topicSummary.onContext,
+                subValue:""
+            },{
+                label:"Titles",
+                target:TARGET_LOW,
+                list:TITLES_DATABASE,
+                subValue:"titles"
+            },{
+                label:"Columns titles",
+                target:1,
+                list:COLUMN_DATABASE.titles
+            },{
+                label:"Columns titles",
+                target:TARGET_LOW,
+                list:COLUMN_DATABASE.columns,
+                subValue:"titles"
+            }
+        ]
+
+    let report="";
+
+    let log=(id,subid,found,target)=>{
+        let color="green";
+        if (found<target)
+            color="red";
+        else if (found>target)
+            color="lightgreen";
+        report+="<span style='color:"+color+";font-weight:bold'>"+id+"</span>"+(subid?" - "+subid:"")+": "+found+"/"+target+"<br>";
+    }
+
+    let subvalue=(value,set)=>{
+        if (set.length) {
+            set=set.split(".");
+            set.forEach(id=>{
+                value=value[id];
+            })
+        }
+        return value;
+    }
+
+    TARGETS.forEach(target=>{
+        let
+            targetvalue=target.target;
+        if (target.subValue !== undefined) {
+            for (let k in target.list) {
+                if (!target.skip || (target.skip.indexOf(k)==-1)) {
+                    let
+                        item=target.list[k],
+                        list=subvalue(item,target.subValue),
+                        foundvalue=list.length;    
+                    log(target.label,item.id||item.letter||k,foundvalue,targetvalue);
+                }
+            }
+        } else {
+            let foundvalue=target.list.length;
+            log(target.label,"",foundvalue,targetvalue);
+        }
+    });
+
+    document.write(report);
+
+    let randomizer=new Randomizer(12345);
+
+    let makeSamples=(entry,about,placeholders,lines,version,pos,prev)=>{
+        if (!pos) pos=0;
+        if (!prev) prev="";
+        if (version[pos]) {
+            let doit=true;
+            if (version[pos].includeOnArticlesAbout)
+                doit=version[pos].includeOnArticlesAbout.indexOf(about)!=-1;
+            else if (version[pos].excludeOnArticlesAbout)
+                doit=version[pos].excludeOnArticlesAbout.indexOf(about)==-1;
+            if (doit && version[pos].text) {
+                version[pos].text.forEach(text=>{
+                    makeSamples(entry,about,placeholders,lines,version,pos+1,prev+" "+text);
+                })
+            } else makeSamples(entry,about,placeholders,lines,version,pos+1,prev);
+        } else {
+            prev=prev.trim().replace(/\{([^}]+)\}/g,(m,m1)=>{
+                let pcs=m1.split(":");
+                switch (pcs[0]) {
+                    case "conjugate":{
+                        let
+                            qty=1,
+                            data=VAR.getPlaceholderData(pcs[2],placeholders);
+                        if ((typeof data == "object") && data.length) {
+                            qty=data.length;
+                            data=data[0];
+                        }
+                        return LANGUAGE.solveConjugate(pcs[1],qty,data);
+                        break;
+                    }
+                    case "plural":{
+                        let
+                            qty=1,
+                            data=VAR.getPlaceholderData(pcs[3],placeholders);
+                        if ((typeof data == "object") && data.length) {
+                            qty=data.length;
+                            data=data[0];
+                        }
+                        return LANGUAGE.solvePlural(pcs[1],pcs[2],qty);
+                        break;
+                    }
+                    case "summarizeTestimony":{
+                        return "___"
+                        break;
+                    }
+                    case "own":{
+                        let data=LANGUAGE.solvePlaceholder(pcs[1],placeholders);
+                        return LANGUAGE.addOwn(data);
+                        break;
+                    }
+                    default:{
+                        return LANGUAGE.solvePlaceholder(m1,placeholders);
+                    }
+                }
+            })
+            prev=LANGUAGE.capitalizeFirst(prev)+".";
+            if (prev.match("___")) {
+                if (entry.topicSummary && entry.topicSummary.onContext) {
+                    for (var k in entry.topicSummary.onContext) {
+                        entry.topicSummary.onContext[k].forEach(piece=>{
+                            let subprev=prev.replace(/___/g,piece);
+                            lines.push(LANGUAGE.cleanLine(subprev));
+                        })
+                    }
+                } else {
+                    for (var k in TESTIMONIES_DATABASE) {
+                        if (TESTIMONIES_DATABASE[k].topicSummary) {
+                            if (TESTIMONIES_DATABASE[k].topicSummary.default)
+                                TESTIMONIES_DATABASE[k].topicSummary.default.forEach(piece=>{
+                                    let subprev=prev.replace(/___/g,piece);
+                                    lines.push(LANGUAGE.cleanLine(subprev));
+                                })
+                            if (TESTIMONIES_DATABASE[k].topicSummary.onContext) {
+                                let prefixes=TESTIMONIES_DATABASE[k].topicSummary.onChainPrefix||[""];
+                                for (let j in TESTIMONIES_DATABASE[k].topicSummary.onContext)
+                                    prefixes.forEach(prefix=>{
+                                        TESTIMONIES_DATABASE[k].topicSummary.onContext[j].forEach(piece=>{
+                                            let subprev=prev.replace(/___/g,prefix+piece);
+                                            lines.push(LANGUAGE.cleanLine(subprev));
+                                        });
+                                    })
+                            }
+                        }
+                    }
+                }
+            } else {
+                lines.push(LANGUAGE.cleanLine(prev));
+            }
+        }
+    }
+
+    let cleanText=(line)=>{
+        line=line
+            .replace(/<[^>]+>/g,"")
+            .replace(/\{simulationMaster\}/g,SIMULATION_MASTER)
+            .replace(/\{simulationLengthDays\}/g,SIMULATION_LENGTH_DAYS)
+            .replace(/\{simulationDatabase\.persons\.length\}/g,"6")
+            .replace(/\{questionnaireDetails\}/g,QUESTIONNAIRE_DETAILS)
+            .replace(/\{questionnaireAttempts\}/g,QUESTIONNAIRE_ATTEMPTS)
+            .replace(/\{mastermindPastLimitString\}/g,MASTERMIND_PAST_LIMIT_STRING)
+            .replace(/\{currentIteration\}/g,"100")
+            .replace(/\{todayIteration\}/g,"100")
+            .replace(/\{result\.grade\.letter\}/g,"A+")
+            .replace(/\{result\.totalScore\}/g,"50")
+            .replace(/\{result\.maxScore\}/g,"100")
+            .trim()
+        ;
+        return line;
+    }
+    
+    let logDialogue=(dialogue,list)=>{
+        dialogue.forEach(line=>{
+            if (line.text) 
+                lineset.push(cleanText(line.text))
+            if (line.question)
+                line.question.forEach(option=>{
+                    if (option.label) list.push(cleanText(option.label))
+                })
+        })
+    }
+
+    // Sentences
+    let
+        lines=[
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []
+        ],
+        BIAS_ANTICAPITALIST={id:"luxury"},
+        PLACE_MIKEHOUSE={id:"Mike's house"},
+        PERSON_LISA={id:"Lisa",tags:{gender:"B"}},
+        PERSON_MIKE={id:"Mike",tags:{gender:"A"}},
+        PERSON_NATHAN={id:"Nathan",tags:{gender:"A"}};
+        
+    for (let k in TESTIMONIES_DATABASE) {
+        let entry=TESTIMONIES_DATABASE[k];
+        if (entry.article) {
+            if (entry.article.titles)
+                entry.article.titles.forEach(title=>{
+                    lines[0].push(title);
+                })
+            entry.article.sentences.forEach(sentence=>{
+                sentence.versions.forEach(version=>{
+                    makeSamples(entry,"person",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_MIKE]}},lines[1],version);
+                    makeSamples(entry,"person",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_LISA]}},lines[1],version);
+                    makeSamples(entry,"person",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_MIKE,PERSON_LISA]}},lines[2],version);
+                    makeSamples(entry,"place",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_MIKE]}},lines[3],version);
+                    makeSamples(entry,"place",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_LISA]}},lines[3],version);
+                    makeSamples(entry,"place",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_MIKE,PERSON_LISA]}},lines[4],version);
+                    makeSamples(entry,"context",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_MIKE]}},lines[5],version);
+                    makeSamples(entry,"context",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_LISA]}},lines[5],version);
+                    makeSamples(entry,"context",{sentence:{bias:BIAS_ANTICAPITALIST,victim:PERSON_NATHAN,place:PLACE_MIKEHOUSE,action:"movedToSafePlace",context:"movedToSafePlace",person:[PERSON_MIKE,PERSON_LISA]}},lines[6],version);
+                })
+            })
+        }
+    }
+
+    let lineset=lines[7];
+
+    for (let k in SCRIPTS)
+        logDialogue(SCRIPTS[k],lineset);
+
+    for (let k in CAMPAIGN_STATES) {
+        CAMPAIGN_STATES[k].forEach(branch=>{
+            if (branch.actions)
+                branch.actions.forEach(action=>{
+                    if (action.result && action.result.postDialogue)
+                        logDialogue(action.result.postDialogue);
+                });
+        })
+    }
+
+    QUESTIONNAIRE_GRADES.forEach(grade=>{
+        if (grade.sentences)
+            grade.sentences.forEach(sentence=>{
+                lineset.push(cleanText(sentence));
+            })
+    })
+
+    for (let k in QUESTIONNAIRE_PRIZES) {
+        QUESTIONNAIRE_PRIZES[k].sentences.forEach(sentence=>{
+            lineset.push(cleanText(sentence));
+        })
+    }
+
+    for (let k in QUESTIONNAIRE_BASIC_SENTENCES) {
+        QUESTIONNAIRE_BASIC_SENTENCES[k].forEach(sentence=>{
+            lineset.push(cleanText(sentence));
+        })
+    }
+
+    lineset.push(cleanText(QUESTIONNAIRE_SENTENCE));
+    lineset.push(cleanText(QUESTIONNAIRE_TUTORIAL));
+
+    lines.forEach((set,setid)=>{
+        let separator=document.createElement("hr");
+        document.body.append(separator);
+        let
+            chunks=Math.ceil(set.length/1000);
+        for (let i=0;i<chunks;i++) {
+            let textarea=document.createElement("textarea");
+            textarea.innerHTML=set.splice(0,1000).join("\n\n");
+            document.body.appendChild(textarea);
+        }
+    })
+
+}
+
+</script>

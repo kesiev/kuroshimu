@@ -1,0 +1,279 @@
+<html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" id="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>Kuroshimu - Console</title>
+    <link rel="stylesheet" type="text/css" href="../style/Seshat/stylesheet.css">
+    <link rel="stylesheet" type="text/css" href="../style/Ferrum/stylesheet.css">
+    <link rel="stylesheet" type="text/css" href="../style/style.css">
+    <link rel="stylesheet" type="text/css" href="../style/extras.css">
+    
+    <script src="chart/chart.umd.js"></script>
+    <script src="chart/helpers.js"></script>
+
+    <script src="../js/simulation/database.js"></script>
+    <script src="../js/simulation/telemetry.js"></script>
+    <script src="../js/simulation/blackbox.js"></script>
+    <script src="../js/simulation/clock.js"></script>
+    <script src="../js/simulation/commitment.js"></script>
+    <script src="../js/simulation/place.js"></script>
+    <script src="../js/simulation/person.js"></script>
+    <script src="../js/simulation/world.js"></script>
+    <script src="../js/simulation/journalist.js"></script>
+    <script src="../js/simulation/simulation.js"></script>
+    <script src="../js/simulation/randomizers.js"></script>
+    <script src="../js/simulation/mastermind.js"></script>
+    <script src="../js/tools/tools.js"></script>
+
+    <script src="../js/jspdf.umd.min.js"></script>
+    <script src="../js/svg2pdf.umd.min.js"></script>
+    <script src="../js/fonts/Seshat-normal.js"></script>
+    <script src="../js/fonts/Ferrum-normal.js"></script>
+
+    <script src="../js/paperprinter.js"></script>
+    <script src="../js/svg.js"></script>
+
+    <style>
+    BODY {
+        background-color: #fff;
+        margin:0;
+        overflow: auto;
+    }
+
+    .factlogsdata {
+        display: none;
+    }
+
+    .drawer {
+        display:none;
+        margin:30px 0;
+    }
+
+    #toolbar {
+        padding: 10px;
+        background-color: #cecece;
+        margin-bottom:10px;
+        border-bottom: 1px solid #000;
+    }
+
+    #view {
+        margin:20px;
+        font-family: monospace;
+    }
+
+    .points {
+        color:#cecece;
+    }
+
+    .page {
+        display: inline-block;
+        margin: auto;
+        box-shadow: 0px 2px 3px #000;
+        border:1px solid #000;
+    }
+
+    .head {
+        font-weight: bold;
+        border-bottom:1px dashed #000;
+        margin:20px 0;
+        padding:10px 0;
+    }
+    </style>
+    
+<style>
+ 
+</style>
+
+</head><body onload="onl()">
+    <div style="position: absolute;left: -1000px;">
+        <div style="font-family: Seshat;">Font loaded</div>
+        <div style="font-family: Times; font-weight: bold;">Font loaded</div>
+        <div style="font-family: Ferrum;">Font loaded</div>
+    </div>
+    <div id="toolbar"></div>
+    <div id="view"></div>
+</body></html>
+<script>
+
+let SEED=0;
+
+function onl() {
+
+    let
+        page,
+        simlogs,
+        mastermind=new Mastermind("../"),
+        tab="view";
+
+    function makeButton(into,label,action) {
+        let input=document.createElement("input");
+        input.type="button";
+        input.value=label;
+        input.onclick=action;
+        into.appendChild(input);
+    }
+
+    function addOption(into,label,value) {
+        let option=document.createElement("option");
+        option.value=value;
+        option.innerHTML=label;
+        into.appendChild(option);
+    }
+
+    function setTab(id) {
+
+        tab=id;
+        view.innerHTML="";
+
+        switch (tab) {
+            case "view":{
+                view.appendChild(page);
+                break;
+            }
+            case "factlogs":{
+                mastermind.renderFactLogs(view);
+                break;
+            }
+            case "simlogs":{
+                view.innerText=simlogs;
+                break;
+            }
+            case "graphs":{
+                mastermind.renderGraphs(view);
+                break;
+            }
+            case "textview":{
+                let
+                    html="";
+                    print=mastermind.getPrint();
+                print.forEach(block=>{
+                    let line=block.text;
+                    line=line
+                        .replace(/\{bold\}/g,"<b>")
+                        .replace(/\{endbold\}/g,"</b>")
+                        .replace(/\{symbol [^}]+\}/g,"");
+                    switch (block.model) {
+                        case "smallTitle":{
+                            html+="<h2>"+line+"</h2>";
+                            break;
+                        }
+                        case "title":{
+                            html+="<h3>"+line+"</h3>";
+                            break;
+                        }
+                        case "body":{
+                            html+="<p>"+line+"</p>";
+                            break;
+                        }
+                    }
+                })
+                view.innerHTML=html;
+                break;
+            }
+        }
+    }
+
+    function runIterationSeed(id) {
+        let
+            view=document.getElementById("view"),
+            toolbar=document.getElementById("toolbar");
+        
+        toolbar.innerHTML="<b>Wait...</b>";
+        view.innerHTML="";
+
+
+        setTimeout(()=>{
+            if (!id) mastermind.setTodayIterationId();
+            else mastermind.setIterationId(id,true);
+
+            do {} while (!mastermind.iterate());
+            
+            mastermind.log();
+
+            mastermind.finalize((data)=>{
+
+                page=document.createElement("div");
+                view.innerHTML="";
+                page.className="page";
+                page.innerHTML=mastermind.getJournalSvg();
+                view.appendChild(page);
+
+                // Always generates the simulation logs in order debug
+                simlogs=mastermind.getSimulationLogs();
+
+                // UI
+                toolbar.innerHTML="<b>Iteration</b>&nbsp;";
+
+                makeButton(toolbar,"R",()=>{
+                    runIterationSeed("#"+GAME_VERSION+"-"+Math.floor(Math.random()*1000000));
+                });
+
+                makeButton(toolbar,"!",()=>{
+                    mastermind.resetSimulation();
+                    runIterationSeed(id);
+                });
+
+                let select=document.createElement("select");
+                addOption(select,"> "+mastermind.getIterationId(),mastermind.getIterationId());
+                mastermind.getAvailableIterationsIds().forEach(id=>{
+                    addOption(select,id,id);
+                });
+                addOption(select,"Input seed","_");
+                toolbar.appendChild(select);
+                select.onchange=()=>{
+                    switch (select.value) {
+                        case "_":{
+                            let seed=prompt("Iteration seed")*1;
+                            if (seed) 
+                                runIterationSeed("#"+GAME_VERSION+"-"+seed);
+                            else
+                                select.selectedIndex=0;
+                            break;
+                        }
+                        default:{
+                            runIterationSeed(select.value);
+                        }
+                    }
+                }
+
+                makeButton(toolbar,"PDF",()=>{
+                    mastermind.downloadJournalPdf();
+                });
+
+                makeButton(toolbar,"SVG",()=>{
+                    mastermind.downloadJournalSvg();
+                });
+
+                makeButton(toolbar,"View",()=>{
+                    setTab("view");
+                });
+
+                makeButton(toolbar,"Text view",()=>{
+                    setTab("textview");
+                });
+
+                makeButton(toolbar,"Fact Logs",()=>{
+                    setTab("factlogs");
+                });
+
+                makeButton(toolbar,"Simulation Logs",()=>{
+                    setTab("simlogs");
+                });
+
+                makeButton(toolbar,"Graphs",()=>{
+                    setTab("graphs");
+                });
+
+                setTab(tab);
+
+            });
+        },100);
+
+    }
+
+    runIterationSeed(SEED?"#"+GAME_VERSION+"-"+SEED:0);
+
+}
+
+</script>
