@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Kuroshimu Hint Box</title>
+    <link rel="stylesheet" type="text/css" href="../style/Seshat/stylesheet.css">
+    <link rel="stylesheet" type="text/css" href="../style/Ferrum/stylesheet.css">
+    <script src="../js/simulation/randomizers.js"></script>
+    <style>
+    
+        BODY {
+            overflow: hidden;
+            min-height: 100%;
+            background-color: #583C87;
+            background-image:  linear-gradient(135deg, #333 25%, transparent 25%), linear-gradient(225deg, #333 25%, transparent 25%), linear-gradient(45deg, #333 25%, transparent 25%), linear-gradient(315deg, #333 25%, #45375e 25%);
+            background-position:  10px 0, 10px 0, 0 0, 0 0;
+            background-size: 10px 10px;
+            background-repeat: repeat;
+        }
+
+        .container {
+            transform: translate(5%, -55%) scale(1);
+            position: absolute;
+            width: 90%;
+            top: 50%;
+        }
+
+        #title, #question, #footer, #footer A {
+            color:#fff;
+            text-align: center;
+            text-shadow:0px 0px 10px #000;
+        }
+
+        #title {
+            margin-bottom:20px;
+            font-size:8vh;
+            line-height:8.5vh;
+            font-family: Ferrum;
+        }
+
+        #question {
+            font-size:4vh;
+            font-family: Seshat;
+        }
+
+        #footer {
+            position: absolute;
+            left:10px;
+            right:10px;
+            bottom:10px;
+            font-family: Seshat;
+            font-size:2vh;
+        }
+
+    </style>
+</head><body onload="onl()">
+    <div class="container">
+        <div id="title">asd</div>
+        <div id="question">asd</div>
+    </div>
+    <div id="footer">&copy; 2023 by KesieV ‐ A new <a href="https://www.kesiev.com/kuroshimu">Kuroshimu</a> hint every 10 mins.</div>
+</body></html>
+<script>
+
+const
+    NEWEVERY = 1000*60*10,
+    QUESTIONS=[
+        {
+            title:"The Welcome message",
+            questions:[
+                "Why the entities are named that way?",
+                "How many entities are there?",
+                "Why do the entities have a job?",
+                "Why do the entities have a type?"
+            ]
+        },{
+            title:"The Simulation Observer",
+            questions:[
+                "How the articles are arranged?",
+                "In which order the sentences of an article are?",
+                "What the Old News is for?",
+                "How an interview works?",
+                "How The Journalist select the entities for its interviews?",
+                "What's the difference between an entity testimony and a fact?",
+                "What's the meaning of article sentences?",
+                "How the sentences are grouped in articles?",
+                "What does the compressed archive icon mean?"      
+            ]
+        },{
+            title:"The Pawticulars insert",
+            questions:[
+                "What the lists are ranking?",
+                "How they can be helpful?"
+            ]
+        },{
+            title:"The Weekly entities stress charts",
+            questions:[
+                "What kind of chart are the stress charts?",
+                "What's the highest value of the stress charts?",
+                "What the dashed lines are for?",
+                "What the letters in the circles are for?",
+                "How these charts are related to the journal?",
+                "What is \"stress\"?"
+            ]
+        },{
+            title:"The notebook",
+            questions:[
+                "Why there is a ranking system and a scoring system?",
+                "How the scoring system works?",
+                "Why do you've 10 attempts to get the final score?",
+                "Is the score or the ranking system related to the number of attempts?",
+                "Why does the game allow you to keep playing after the final score?"
+            ]
+        },{
+            title:"The simulation",
+            questions:[
+                "What the entities can do in the simulation?",
+                "How the places are arranged in the simulation?",
+                "Are the entities following some kind of common behavior in specific situations?"
+            ]
+        }
+    ];
+
+
+function onl() {
+    let
+        date=(new Date()).getTime(),
+        list=[];
+    QUESTIONS.forEach(section=>{
+        section.questions.forEach(question=>{
+            list.push({ title:section.title, question:question })
+        })
+    });
+
+    let
+        fullset=list.length*NEWEVERY,
+        shuffleSeed=Math.floor(date/fullset),
+        picks=Math.floor((date-shuffleSeed*fullset)/NEWEVERY)+1,
+        randomizer=new Randomizer(shuffleSeed),
+        bag=new Bag(list,randomizer),
+        item;
+
+    for (let i=0;i<picks;i++)
+        item=bag.pick();
+
+    document.getElementById("title").innerHTML=item.title;
+    document.getElementById("question").innerHTML=item.question;
+}
+
+</script>

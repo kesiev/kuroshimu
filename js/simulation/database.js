@@ -2,7 +2,7 @@ const
     GAME_STORAGE="_KUROSHIMU",
     GAME_VERSION=1,
     GAME_NAME="Kuroshimu",
-    GAME_FOOTER="Better with Firefox/Chrome ‐ "+GAME_NAME+" 0."+GAME_VERSION+"b ‐ &copy; 2023 by KesieV ‐ Sources at <a target='_blank' href='https://github.com/kesiev/kuroshimu'>github.com/kesiev/kuroshimu</a>";
+    GAME_FOOTER="Better with Firefox/Chrome ‐ "+GAME_NAME+" 0."+GAME_VERSION+"b ‐ &copy; 2023 by KesieV ‐ Sources at <a target='_blank' href='https://github.com/kesiev/kuroshimu'>github.com/kesiev/kuroshimu</a> - <a href='hintbox/'>Stuck?</a>";
 
 const
     DAYS_DELAY_VERYSHORT=2,
