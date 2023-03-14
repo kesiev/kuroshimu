@@ -5,6 +5,15 @@
     }
 }
 
+@keyframes floating {
+    0% {
+        translate: 0px 0px;
+    }
+    100% {
+        translate: 0px -1vh;
+    }
+}
+
 .background {
     position: fixed;
     width: 100vw;
