@@ -10,7 +10,7 @@
         translate: 0px 0px;
     }
     100% {
-        translate: 0px -1vh;
+        translate: 0px -0.5vh;
     }
 }
 
