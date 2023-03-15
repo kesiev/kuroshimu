@@ -26,21 +26,24 @@
             top: 50%;
         }
 
-        #title, #question, #footer, #footer A {
+        #title, #question, #footer, A {
             color:#fff;
             text-align: center;
             text-shadow:0px 0px 10px #000;
         }
 
         #title {
+            padding:10px 0;
             margin-bottom:20px;
-            font-size:8vh;
+            font-size:7vh;
             line-height:8.5vh;
             font-family: Ferrum;
+            border-bottom:2px solid #fff;
         }
 
         #question {
-            font-size:4vh;
+            padding:10px 0;
+            font-size:3vh;
             font-family: Seshat;
         }
 
@@ -79,7 +82,7 @@ const
             questions:[
                 "How the articles are arranged?",
                 "In which order the sentences of an article are?",
-                "What the Old News is for?",
+                "What the Old News are for?",
                 "How an interview works?",
                 "How The Journalist selects the entities for its interviews?",
                 "What's the difference between an entity testimony and a fact?",
@@ -88,42 +91,48 @@ const
                 "What does the compressed archive icon mean?"      
             ]
         },{
-            title:"The Pawticulars insert",
+            title:"The Pawticulars Supplement",
             questions:[
                 "What the lists are ranking?",
                 "How they can be helpful?"
             ]
         },{
-            title:"The Weekly entities stress charts",
+            title:"The Stress Charts",
             questions:[
                 "What kind of chart are the stress charts?",
                 "What's the highest value of the stress charts?",
                 "What the dashed lines are for?",
                 "What the letters in the circles are for?",
-                "How these charts are related to the journal?",
+                "How these charts are related to the newspaper?",
                 "What is \"stress\"?"
             ]
         },{
-            title:"The notebook",
+            title:"The Notebook",
             questions:[
                 "Why there is a ranking system and a scoring system?",
                 "How the scoring system works?",
                 "Why have you 10 attempts to get the final score?",
                 "Is the score or the ranking system related to the number of attempts?",
-                "Why does the game allow you to keep playing after the final score?"
+                "Why does the game allow you to keep playing after the final score?",
+                "Is a partial ranking of the notebook still useful?"
             ]
         },{
-            title:"The simulation",
+            title:"The Simulation",
             questions:[
                 "What the entities can do in the simulation?",
                 "How the places are arranged in the simulation?",
-                "Are the entities following some kind of common behavior in specific situations?"
+                "Are the entities following some kind of common behavior in specific situations?",
+                "Are you collecting Fact Logs?",
+                "Are you collecting matching Fact Logs with the newspaper?",
+                "What does the game ask you to do?",
+                "Have you read <a target='_blank' href='https://github.com/kesiev/kuroshimu'>this article</a>?",
+                "Have you seen <a target='_blank' href='https://github.com/kesiev/kuroshimu/blob/main/markdown/datamaps-i-logic.png'>this scheme</a> about the articles?",
+                "Have you seen <a target='_blank' href='https://github.com/kesiev/kuroshimu/blob/main/markdown/datamaps-i-plan.png'>this scheme</a> about the simulation?"
             ]
         }
     ];
 
-
-function onl() {
+function newHint() {
     let
         date=(new Date()).getTime(),
         list=[];
@@ -146,6 +155,12 @@ function onl() {
 
     document.getElementById("title").innerHTML=item.title;
     document.getElementById("question").innerHTML=item.question;
+
+    setTimeout(newHint,NEWEVERY);
+}
+
+function onl() {
+   newHint();
 }
 
 </script>
