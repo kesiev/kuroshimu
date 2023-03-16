@@ -24,25 +24,25 @@ let SCRIPTS={
         ]}
     ],
     tutorial:[
-        { who:"{simulationSoftware}", text:"System loaded successfully. Hit the screen to start.", setTodayIterationId:true },
-        { avatar:{id:"standing", animation:"appear" }, who:"{simulationSoftware}", text:"Hello visitor! Do you want to play a little game?" },
-        { avatar:{id:"shocked", animation:"jump2" }, who:"{simulationSoftware}", text:"Very well... Let me introduce myself!" },
-        { avatar:{id:"happy", animation:"serious" }, who:"{simulationMaster}", text:"I'm <span class='accent'>{simulationMaster}</span>, the master AI of a simulated world set in the year 201X!" },
-        { avatar:{id:"standing", animation:"jump2" }, who:"{simulationMaster}", text:"Every day I run a new iteration: I create <span class='accent'>{simulationDatabase.persons.length} entities</span> and let them live their life for <span class='accent'>{simulationLengthDays} days</span>. Don't worry. It just takes a few seconds in your world!" },
-        { who:"{simulationMaster}", text:"Every simulation's Sunday night I interview the most interesting entities to make a <span class='accent'>newspaper</span>! No entity can read it: It's just for you!" },
-        { avatar:{id:"standing", animation:"jump" },who:"{simulationMaster}", text:"Your job is to uncover facts from entities' opinions! A love affair? A bad day? I can't wait to hear what you'll discover!" },
-        { avatar:{id:"shocked", animation:"serious" }, who:"{simulationMaster}", text:"But beware. You're going to investigate a <span class='accent'>simulation</span>, not a story. And simulations have <span class='accent'>no specific purposes</span>, as in life..." },
-        { avatar:{id:"standing", animation:"jump" }, who:"{simulationMaster}", text:"And, as in life, there are no facts ready to happen in a way that you can find out about them. My newspaper is a legacy of an iteration." },
-        { who:"{simulationMaster}", text:"Long story short, you won't find any clue made for you to discover a specific thing. It's up to your <span class='accent'>intuition</span> and <span class='accent'>interpretation</span> if there is something to uncover." },
-        { avatar:{id:"standing", animation:"sad" }, who:"{simulationMaster}", text:"Sadly it's not the same for me since I run all the facts. It's so boring I decided to <span class='accent'>meet the entities</span> at each iteration beginning to spice things up!" },
-        { avatar:{id:"happy", animation:"jump" }, who:"{simulationMaster}", text:"First, I gift them a special watch. It also measures the entity <span class='accent'>stress level</span>. I'll use their data and draw charts in the newspaper." },
-        { avatar:{id:"evil", animation:"serious" }, who:"{simulationMaster}", text:"Then I tell one of them a little lie: I promise to release it from the simulation if it <span class='accent'>murders</span> another entity before the simulation ends." },
-        { avatar:{id:"standing", animation:"leave" }, who:"{simulationMaster}", text:"No more talking! Let the simulation <span class='accent'>begin</span>!", startIteration:true },
-        { avatar:{id:"standing", animation:"aside" }, who:"{simulationMaster}", text:"Well, iteration {todayIteration} is just over! Here you are a copy of my <span class='accent'>newspaper</span>!", question:[
+        { canSkip:true, who:"{simulationSoftware}", text:"System loaded successfully. Hit the screen to start.", setTodayIterationId:true },
+        { canSkip:true, avatar:{id:"standing", animation:"appear" }, who:"{simulationSoftware}", text:"Hello visitor! Do you want to play a little game?" },
+        { canSkip:true, avatar:{id:"shocked", animation:"jump2" }, who:"{simulationSoftware}", text:"Very well... Let me introduce myself!" },
+        { canSkip:true, avatar:{id:"happy", animation:"serious" }, who:"{simulationMaster}", text:"I'm <span class='accent'>{simulationMaster}</span>, the master AI of a simulated world set in the year 201X!" },
+        { canSkip:true, avatar:{id:"standing", animation:"jump2" }, who:"{simulationMaster}", text:"Every day I run a new iteration: I create <span class='accent'>{simulationDatabase.persons.length} entities</span> and let them live their life for <span class='accent'>{simulationLengthDays} days</span>. Don't worry. It just takes a few seconds in your world!" },
+        { canSkip:true, who:"{simulationMaster}", text:"Every simulation's Sunday night I interview the most interesting entities to make a <span class='accent'>newspaper</span>! No entity can read it: It's just for you!" },
+        { canSkip:true, avatar:{id:"standing", animation:"jump" },who:"{simulationMaster}", text:"Your job is to uncover facts from entities' opinions! A love affair? A bad day? I can't wait to hear what you'll discover!" },
+        { canSkip:true, avatar:{id:"shocked", animation:"serious" }, who:"{simulationMaster}", text:"But beware. You're going to investigate a <span class='accent'>simulation</span>, not a story. And simulations have <span class='accent'>no specific purposes</span>, as in life..." },
+        { canSkip:true, avatar:{id:"standing", animation:"jump" }, who:"{simulationMaster}", text:"And, as in life, there are no facts ready to happen in a way that you can find out about them. My newspaper is a legacy of an iteration." },
+        { canSkip:true, who:"{simulationMaster}", text:"Long story short, you won't find any clue made for you to discover a specific thing. It's up to your <span class='accent'>intuition</span> and <span class='accent'>interpretation</span> if there is something to uncover." },
+        { canSkip:true, avatar:{id:"standing", animation:"sad" }, who:"{simulationMaster}", text:"Sadly it's not the same for me since I run all the facts. It's so boring I decided to <span class='accent'>meet the entities</span> at each iteration beginning to spice things up!" },
+        { canSkip:true, avatar:{id:"happy", animation:"jump" }, who:"{simulationMaster}", text:"First, I gift them a special watch. It also measures the entity <span class='accent'>stress level</span>. I'll use their data and draw charts in the newspaper." },
+        { canSkip:true, avatar:{id:"evil", animation:"serious" }, who:"{simulationMaster}", text:"Then I tell one of them a little lie: I promise to release it from the simulation if it <span class='accent'>murders</span> another entity before the simulation ends." },
+        { canSkip:true, avatar:{id:"standing", animation:"leave" }, who:"{simulationMaster}", text:"No more talking! Let the simulation <span class='accent'>begin</span>!", startIteration:true },
+        { canSkip:true, avatar:{id:"standing", animation:"aside" }, who:"{simulationMaster}", text:"Well, iteration {todayIteration} is just over! Here you are a copy of my <span class='accent'>newspaper</span>!", question:[
             { label:"Download it", downloadJournal:true },
             { label:"I already have it" }
         ] },
-        { avatar:{id:"standing", animation:"asidenormal" }, who:SIMULATION_MASTER, text:"Enjoy the reading!" },
+        { canSkip:true, avatar:{id:"standing", animation:"asidenormal" }, who:SIMULATION_MASTER, text:"Enjoy the reading!" },
     
     ],
     tutorialNotebook:[
@@ -134,6 +134,15 @@ function Game(settings,prefix) {
         nextEnabled=true;
     }
 
+    let enableSkip=()=>{
+        dialogueBox.parentNode.appendChild(skipButton);
+    }
+
+    let disableSkip=()=>{
+        if (skipButton.parentNode)
+            skipButton.parentNode.removeChild(skipButton);
+    }
+
     let replacePlaceholders=(sentence,placeholders)=>{
         return sentence.replace(/{([^}]+)}/g,(m,m1)=>{
             let
@@ -189,6 +198,7 @@ function Game(settings,prefix) {
     let nextLine=(isfirst,cb)=>{
         if (lastLine && lastLine.startIteration) {
             lastLine=0;
+            disableSkip();
             startIteration(cb);
         } else {
             if (executeLineLogic(lastLine)) {
@@ -203,6 +213,8 @@ function Game(settings,prefix) {
                     dialogueBox.parentNode.style.cursor="";
                     dialogueTitle.innerHTML=replacePlaceholders(lastLine.who,placeholders);
                     dialogueContent.innerHTML=replacePlaceholders(lastLine.text,placeholders);
+                    if (lastLine.canSkip) enableSkip();
+                    else disableSkip();
                     if (lastLine.avatar)
                         showAvatar(avatars[lastLine.avatar.id],lastLine.avatar.animation,dialogueBox.parentNode);
                     if (lastLine.question) {
@@ -363,6 +375,7 @@ function Game(settings,prefix) {
     }
 
     let moveDialogueBoxInto=(into)=>{
+        disableSkip();
         if (dialogueBox.parentNode)
             dialogueBox.parentNode.removeChild(dialogueBox);
         into.appendChild(dialogueBox);
@@ -706,6 +719,7 @@ function Game(settings,prefix) {
 
     let
         dialogueQuestions=newNode("div","dialoguequestions"),
+        skipButton=newNode("div","skipbutton"),
         dialogueBox=newNode("div","dialoguebox"),
         dialogueTitle=newNode("div","dialoguetitle",dialogueBox),
         dialogueContent=newNode("div","dialoguecontent",dialogueBox),
@@ -718,6 +732,17 @@ function Game(settings,prefix) {
     footer.innerHTML=settings.mainMenuFooter;
     newNode("div","avatar avatar1",titleScreen);
     newNode("div","avatar avatar2",titleScreen);
+    skipButton.innerHTML="Skip tutorial";
+    skipButton.onclick=()=>{
+        if (canGoNext()) {
+            keepGoing=false;
+            endScript();
+            fadeOut(cutscene,"cutscene",true,()=>{
+                this.titleScreen();
+            });
+        }
+    }
+    
 
     // Initialize variables
 

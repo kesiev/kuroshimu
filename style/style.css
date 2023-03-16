@@ -256,6 +256,29 @@ BODY {
     margin:30px 0;
 }
 
+.skipbutton {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    position:absolute;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    right:-90px;
+    top:20px;
+    padding:20px 100px 20px 20px;
+    background-color: #583C87;
+    color: #fff;
+    display: inline-block;
+    z-index: 200;
+    font-size: 26px;
+    font-family: Seshat;
+    border-radius: 100px;
+    border:10px solid #3c285d;
+    text-shadow: 0px 2px 0px #000;
+    box-shadow: 0px 5px 10px #000;
+}
+
 .actionbutton:hover {
     border-color:#fff;
     transform: translate(0,-5px);
@@ -729,6 +752,13 @@ BODY {
         border:5px solid #3c285d;
         border-radius: 100px;
         margin:20px 0;
+    }
+
+    .skipbutton {
+        right:-90px;
+        padding:10px 100px 10px 10px;
+        font-size:20px;
+        border:5px solid #3c285d;
     }
 
     .iterationselector {
