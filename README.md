@@ -185,3 +185,4 @@ Thanks to my wife [Bianca](http://www.linearkey.net/) for providing tons of grea
 ### Trivia
 
   - In a very sci-fi fashion, Bianca helped a lot in finding bugs in the simulation using contradictions reported in the DATAMAPS-I newspaper!
+  - Do you want to read a [Kuroshimu investigation story](CASE-1-19433.md)?
