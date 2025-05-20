@@ -1,11 +1,24 @@
 const
     DEBUG=false;
+    
+let
+    SIZERATIO = 1,
+    ITALICSPACING = 0,
+    ITALICTILT = 0.2;
 
 function PaperPrinter(svg) {
 
     let
-        side=0;
+        side=0,
+        root = svg.node.getElementsByTagName("svg")[0];
+        bboxWidth = root.getBBox().width;
 
+    // Firefox gets different sizes
+
+    if (bboxWidth>10000) {
+        SIZERATIO = 0.01;
+        ITALICSPACING = -0.2;
+    }
 
     let getPlaceholder=function(id,parent) {
         let
@@ -81,8 +94,8 @@ function PaperPrinter(svg) {
     function measureNode(node) {
         let box=node.getBBox();
         return {
-            width:box.width,
-            height:box.height
+            width:box.width*SIZERATIO,
+            height:box.height*SIZERATIO
         };
     }
 
